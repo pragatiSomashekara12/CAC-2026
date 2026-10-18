@@ -1,0 +1,26 @@
+{
+  "_README": "EVERY number here is a PLACEHOLDER until replaced with a verified, cited source. Fill in each _source field.",
+
+  "analysis_years": 20,
+  "_analysis_years_source": "TODO: pick a horizon (USDOT BCA guidance commonly uses 20-30 years) and cite it",
+
+  "discount_rate": 0.07,
+  "_discount_rate_source": "TODO: OMB Circular A-94 / USDOT BCA guidance discount rate",
+
+  "value_of_time_per_hour": 20.0,
+  "_value_of_time_source": "TODO: USDOT Benefit-Cost Analysis Guidance, value of travel time (all purposes)",
+
+  "property_uplift_pct": { "road": 0.03, "bridge": 0.03, "water": 0.05 },
+  "_property_uplift_source": "TODO: published study linking infrastructure to nearby property values",
+
+  "reference_class": {
+    "road":   { "mean_overrun_pct": 0.20, "sd_overrun_pct": 0.30 },
+    "bridge": { "mean_overrun_pct": 0.34, "sd_overrun_pct": 0.40 },
+    "water":  { "mean_overrun_pct": 0.25, "sd_overrun_pct": 0.35 }
+  },
+  "_reference_class_source": "TODO: verify every value against Flyvbjerg's published reference class tables",
+
+  "small_project_threshold": 50000000,
+  "small_project_scale": 0.6,
+  "_small_project_scale_source": "TODO: your documented assumption for scaling megaproject overruns down to small projects (disclose in write-up)"
+}
