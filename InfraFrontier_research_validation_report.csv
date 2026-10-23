@@ -1,0 +1,7 @@
+check,result,interpretation
+Original project catalogue rows,30,30 ARDOT CAP catalogue rows retained.
+Rows enriched with separately reported final costs,6,Six exact project-name matches verified in ARDOT 2025 BCA Table 1.
+Rows complete for cost-overrun training,0,No verified comparable original-estimate/final-cost pair found in the reviewed sources.
+Rows complete for return-model training,0,"No reviewed row has all required time-savings, trips/traffic, parcel values, and project-specific tax inputs."
+Strict complete training rows exported,0 data rows,Header-only CSV; intentionally excludes incomplete cases rather than fabricating values.
+Missing values,Explicitly documented,Research gaps are marked as unavailable/not found; they are never encoded as zero.
