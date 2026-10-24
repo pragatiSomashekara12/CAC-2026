@@ -1,26 +1,26 @@
 {
-  "_README": "EVERY number here is a PLACEHOLDER until replaced with a verified, cited source. Fill in each _source field.",
+  "_README": "Sourced values cite their source. Values marked ASSUMPTION are team assumptions, disclosed in the write-up.",
 
   "analysis_years": 20,
-  "_analysis_years_source": "TODO: pick a horizon (USDOT BCA guidance commonly uses 20-30 years) and cite it",
+  "_analysis_years_source": "ASSUMPTION: 20-year analysis period",
 
   "discount_rate": 0.07,
-  "_discount_rate_source": "TODO: OMB Circular A-94 / USDOT BCA guidance discount rate",
+  "_discount_rate_source": "USDOT BUILD Grants: Preparing a Benefit-Cost Analysis (Feb 2026): 'Use a 7% discount rate for all benefits and costs.' https://www.transportation.gov/sites/dot.gov/files/2026-02/BUILD%20Grants%20Preparing%20a%20Benefit-Cost%20Analysis%202-2-26.pdf",
 
-  "value_of_time_per_hour": 20.0,
-  "_value_of_time_source": "TODO: USDOT Benefit-Cost Analysis Guidance, value of travel time (all purposes)",
+  "value_of_time_per_hour": 21.80,
+  "_value_of_time_source": "USDOT BCA Guidance (Appendix A), personal auto travel, $21.80 per person-hour, as used in USDOT BUILD BCA guide (Feb 2026). Applied per vehicle (conservative; ignores 1.52 avg occupancy).",
 
   "property_uplift_pct": { "road": 0.03, "bridge": 0.03, "water": 0.05 },
-  "_property_uplift_source": "TODO: published study linking infrastructure to nearby property values",
+  "_property_uplift_source": "ASSUMPTION: illustrative property value uplift near improved infrastructure",
 
   "reference_class": {
-    "road":   { "mean_overrun_pct": 0.20, "sd_overrun_pct": 0.30 },
-    "bridge": { "mean_overrun_pct": 0.34, "sd_overrun_pct": 0.40 },
-    "water":  { "mean_overrun_pct": 0.25, "sd_overrun_pct": 0.35 }
+    "road":   { "mean_overrun_pct": 0.204, "sd_overrun_pct": 0.299 },
+    "bridge": { "mean_overrun_pct": 0.338, "sd_overrun_pct": 0.624 },
+    "water":  { "mean_overrun_pct": 0.25,  "sd_overrun_pct": 0.35 }
   },
-  "_reference_class_source": "TODO: verify every value against Flyvbjerg's published reference class tables",
+  "_reference_class_source": "Road and bridge: Flyvbjerg (2005), World Bank Policy Research Working Paper 3781, Table 1 (roads N=167, bridges/tunnels N=33), citing Flyvbjerg, Holm & Buhl (2002). https://arxiv.org/pdf/1303.7400. Water: ASSUMPTION (no Flyvbjerg category).",
 
   "small_project_threshold": 50000000,
-  "small_project_scale": 0.6,
-  "_small_project_scale_source": "TODO: your documented assumption for scaling megaproject overruns down to small projects (disclose in write-up)"
+  "small_project_scale": 1.0,
+  "_small_project_scale_source": "No scaling applied: Flyvbjerg rates used as published."
 }
