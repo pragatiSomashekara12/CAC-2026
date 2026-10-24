@@ -1,203 +1,83 @@
-import React, { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+type Point = { total_cost: number; total_return: number; risk: number; project_ids?: string[]; projects?: any; };
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [projects, setProjects] = useState<any[]>([]);
+  const [frontier, setFrontier] = useState<Point[]>([]);
+  const [idx, setIdx] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const demo = await (await fetch('http://127.0.0.1:8000/demo-projects')).json();
+        setProjects(demo);
+        const res = await fetch('http://127.0.0.1:8000/frontier', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projects: demo, budget: 50000000 })
+        });
+        const data = await res.json();
+        const pts = Array.isArray(data) ? data : data.frontier || [];
+        setFrontier(pts);
+      } catch(e){ console.error(e) } finally { setLoading(false) }
+    })();
+  }, []);
+
+  const sel = frontier[idx];
+  const bounds = useMemo(() => {
+    if(!frontier.length) return null;
+    const r = frontier.map(p=>p.risk), ret = frontier.map(p=>p.total_return);
+    return { minR: Math.min(...r), maxR: Math.max(...r), minRet: Math.min(...ret), maxRet: Math.max(...ret) };
+  }, [frontier]);
+  const getIds = (p:Point) => p?.project_ids || p?.projects || [];
 
   return (
-    <div style={styles.appContainer}>
-      {/* Top Navigation Bar */}
-      <nav style={styles.navbar}>
-        <div style={styles.logo}>InfraFrontier</div>
-        <div style={styles.navLinks}>
-          <button 
-            onClick={() => setActiveTab('dashboard')} 
-            style={activeTab === 'dashboard' ? styles.activeNavBtn : styles.navBtn}
-          >
-            Dashboard
-          </button>
-          <button 
-            onClick={() => setActiveTab('projects')} 
-            style={activeTab === 'projects' ? styles.activeNavBtn : styles.navBtn}
-          >
-            Projects
-          </button>
-          <button 
-            onClick={() => setActiveTab('optimization')} 
-            style={activeTab === 'optimization' ? styles.activeNavBtn : styles.navBtn}
-          >
-            Portfolio Optimization
-          </button>
-          <button 
-            onClick={() => setActiveTab('validation')} 
-            style={activeTab === 'validation' ? styles.activeNavBtn : styles.navBtn}
-          >
-            Validation
-          </button>
-        </div>
+    <div style={{fontFamily:'system-ui', background:'#f5f7fb', minHeight:'100vh'}}>
+      <nav style={{background:'#0f172a', color:'white', padding:'12px 24px', display:'flex', gap:20}}>
+        <b>InfraFrontier</b>
+        <button onClick={()=>setActiveTab('dashboard')} style={{background: activeTab==='dashboard' ? '#1e293b' : 'none', border:'none', color: activeTab==='dashboard' ? '#38bdf8' : 'white', cursor:'pointer', padding:'6px 10px', borderRadius:6}}>Dashboard</button>
+        <button onClick={()=>setActiveTab('projects')} style={{background: activeTab==='projects' ? '#1e293b' : 'none', border:'none', color: activeTab==='projects' ? '#38bdf8' : 'white', cursor:'pointer', padding:'6px 10px', borderRadius:6}}>Projects</button>
+        <button onClick={()=>setActiveTab('optimization')} style={{background: activeTab==='optimization' ? '#1e293b' : 'none', border:'none', color: activeTab==='optimization' ? '#38bdf8' : 'white', cursor:'pointer', padding:'6px 10px', borderRadius:6}}>Portfolio Optimization</button>
       </nav>
-
-      {/* Main Content Area */}
-      <main style={styles.mainContent}>
-        {activeTab === 'dashboard' && <DashboardView />}
-        {activeTab === 'projects' && <ProjectsView />}
-        {activeTab === 'optimization' && <OptimizationView />}
-        {activeTab === 'validation' && <ValidationView />}
+      <main style={{padding:24, maxWidth:1100, margin:'0 auto'}}>
+        {loading && <p>Loading $50M frontier... smallest $8.5M</p>}
+        {activeTab==='dashboard' && sel && (
+          <>
+            <h2 style={{textAlign:'center'}}>Dashboard - Point {idx} (Uses Selected Frontier Point)</h2>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:16}}>
+              <div style={{background:'white', padding:20, borderRadius:12, textAlign:'center', border:'1px solid #e2e8f0'}}>TOTAL BUDGET<br/><b style={{fontSize:26}}>${sel.total_cost?.toLocaleString()}</b><br/><small>Limit $50M</small></div>
+              <div style={{background:'white', padding:20, borderRadius:12, textAlign:'center', border:'1px solid #e2e8f0'}}>PROJECTS ADDED<br/><b style={{fontSize:26}}>{getIds(sel).length}</b></div>
+              <div style={{background:'white', padding:20, borderRadius:12, textAlign:'center', border:'1px solid #e2e8f0'}}>EXPECTED RETURN<br/><b style={{fontSize:26}}>{sel.total_return}</b></div>
+              <div style={{background:'white', padding:20, borderRadius:12, textAlign:'center', border:'1px solid #e2e8f0'}}>RISK LEVEL<br/><b style={{fontSize:26}}>{sel.risk}</b></div>
+            </div>
+          </>
+        )}
+        {activeTab==='optimization' && bounds && sel && (
+          <>
+            <h3>Risk vs Total Return - Budget $50M (scatter)</h3>
+            <div style={{background:'white', padding:16, borderRadius:12, border:'1px solid #e2e8f0'}}>
+              <svg viewBox="0 0 500 300" width="100%" height={320} style={{background:'#f8fafc'}}>
+                <text x="250" y="15" textAnchor="middle" fontSize="12">Risk (X) vs Total Return (Y)</text>
+                <line x1={40} y1={260} x2={480} y2={260} stroke="#94a3b8"/><line x1={40} y1={20} x2={40} y2={260} stroke="#94a3b8"/>
+                {frontier.map((p,i)=>{
+                  const x = 40 + ((p.risk - bounds.minR)/(bounds.maxR-bounds.minR||1))*430;
+                  const y = 260 - ((p.total_return - bounds.minRet)/(bounds.maxRet-bounds.minRet||1))*230;
+                  return <circle key={i} cx={x} cy={y} r={i===idx?9:5} fill={i===idx?'#0ea5e9':'#94a3b8'} onClick={()=>setIdx(i)} style={{cursor:'pointer'}}/>
+                })}
+              </svg>
+            </div>
+            <div style={{background:'white', padding:16, borderRadius:12, marginTop:16, border:'1px solid #e2e8f0'}}>
+              <label><b>Slider to select point on frontier: {idx} / {frontier.length-1}</b></label>
+              <input type="range" min={0} max={frontier.length-1} value={idx} onChange={e=>setIdx(parseInt(e.target.value))} style={{width:'100%'}}/>
+              <p>Cost: ${sel.total_cost?.toLocaleString()} | Return: {sel.total_return} | Risk: {sel.risk}</p>
+              <p><b>Selected project_ids:</b></p>
+              <div style={{display:'flex', flexWrap:'wrap', gap:6}}>{getIds(sel).map((id:string)=><span key={id} style={{background:'#e0f2fe', padding:'4px 8px', borderRadius:12, fontSize:12}}>{id}</span>)}</div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );
 }
-
-// 1. Dashboard View
-function DashboardView() {
-  return (
-    <div>
-      <h1 style={styles.title}>Dashboard</h1>
-      <p style={styles.subtitle}>A stronger future starts here.</p>
-      
-      <div style={styles.grid}>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>TOTAL BUDGET</div>
-          <div style={styles.cardVal}>$5,000,000</div>
-        </div>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>PROJECTS ADDED</div>
-          <div style={styles.cardVal}>6</div>
-        </div>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>EXPECTED RETURN</div>
-          <div style={styles.cardVal}>18.5%</div>
-        </div>
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>RISK LEVEL</div>
-          <div style={styles.cardVal}>Moderate</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 2. Projects View
-function ProjectsView() {
-  return (
-    <div>
-      <h1 style={styles.title}>Projects</h1>
-      <p style={styles.subtitle}>Build your community's next chapter.</p>
-      <div style={styles.card}>
-        <p style={{ color: '#64748b' }}>Project form and infrastructure list go here...</p>
-      </div>
-    </div>
-  );
-}
-
-// 3. Portfolio Optimization View
-function OptimizationView() {
-  return (
-    <div>
-      <h1 style={styles.title}>Portfolio Optimization</h1>
-      <p style={styles.subtitle}>Find your best path forward.</p>
-      <div style={styles.card}>
-        <p style={{ color: '#64748b' }}>Efficient frontier chart and risk tolerance slider go here...</p>
-      </div>
-    </div>
-  );
-}
-
-// 4. Validation View
-function ValidationView() {
-  return (
-    <div>
-      <h1 style={styles.title}>Validation</h1>
-      <p style={styles.subtitle}>Confidence, backed by comparison.</p>
-      <div style={styles.card}>
-        <p style={{ color: '#64748b' }}>Historical Arkansas project outcomes go here...</p>
-      </div>
-    </div>
-  );
-}
-
-// Styling Object
-const styles: { [key: string]: React.CSSProperties } = {
-  appContainer: {
-    minHeight: '100vh',
-    backgroundColor: '#f8fafc',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    color: '#0f172a',
-  },
-  navbar: {
-    backgroundColor: '#0F172A',
-    color: '#ffffff',
-    padding: '16px 32px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  logo: {
-    fontSize: '22px',
-    fontWeight: 'bold',
-    letterSpacing: '0.5px',
-  },
-  navLinks: {
-    display: 'flex',
-    gap: '20px',
-  },
-  navBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#94a3b8',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    paddingBottom: '4px',
-  },
-  activeNavBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#38bdf8',
-    borderBottom: '2px solid #38bdf8',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '600',
-    paddingBottom: '4px',
-  },
-  mainContent: {
-    maxWidth: '1100px',
-    margin: '0 auto',
-    padding: '32px 16px',
-  },
-  title: {
-    fontSize: '28px',
-    fontWeight: '700',
-    margin: '0 0 4px 0',
-    color: '#0f172a',
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#64748b',
-    margin: '0 0 24px 0',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    padding: '20px',
-    borderRadius: '12px',
-    border: '1px solid #e2e8f0',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-  },
-  cardHeader: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#94a3b8',
-    letterSpacing: '0.5px',
-  },
-  cardVal: {
-    fontSize: '28px',
-    fontWeight: '700',
-    marginTop: '8px',
-    color: '#0f172a',
-  },
-};
