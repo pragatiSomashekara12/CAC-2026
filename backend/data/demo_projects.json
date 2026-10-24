@@ -1,13 +1,9 @@
 {
-  "_README": "FAKE projects for testing only. Replace with real, sourced projects before the demo.",
+  "_README": "Location data (traffic, avg property value, millage) from team research: county assessors + ARDOT. ESTIMATED fields are illustrative assumptions, not sourced: cost, minutes_saved_per_trip, parcel count. tax_rate = millage x 0.20 (Arkansas assesses property at 20% of market value).",
   "projects": [
-    { "id": "p1", "name": "FAKE Hwy 412 widening",     "type": "road",   "location": "Springdale, AR", "cost": 2400000, "daily_traffic": 30000, "minutes_saved_per_trip": 2.0, "nearby_property_value": 90000000,  "tax_rate": 0.010 },
-    { "id": "p2", "name": "FAKE Fort Smith bridge repair", "type": "bridge", "location": "Fort Smith, AR", "cost": 1800000, "daily_traffic": 18000, "minutes_saved_per_trip": 3.0, "nearby_property_value": 40000000,  "tax_rate": 0.011 },
-    { "id": "p3", "name": "FAKE Rogers water line",     "type": "water",  "location": "Rogers, AR",     "cost": 1200000, "daily_traffic": 0,     "minutes_saved_per_trip": 0.0, "nearby_property_value": 120000000, "tax_rate": 0.010 },
-    { "id": "p4", "name": "FAKE Bentonville bypass",    "type": "road",   "location": "Bentonville, AR","cost": 3500000, "daily_traffic": 22000, "minutes_saved_per_trip": 4.0, "nearby_property_value": 60000000,  "tax_rate": 0.010 },
-    { "id": "p5", "name": "FAKE rural bridge replace",  "type": "bridge", "location": "Benton Co., AR", "cost": 700000,  "daily_traffic": 2500,  "minutes_saved_per_trip": 6.0, "nearby_property_value": 8000000,   "tax_rate": 0.009 },
-    { "id": "p6", "name": "FAKE intersection upgrade",  "type": "road",   "location": "Lowell, AR",     "cost": 500000,  "daily_traffic": 15000, "minutes_saved_per_trip": 0.8, "nearby_property_value": 20000000,  "tax_rate": 0.010 },
-    { "id": "p7", "name": "FAKE water treatment expand","type": "water",  "location": "Siloam Springs, AR","cost": 2900000,"daily_traffic": 0,  "minutes_saved_per_trip": 0.0, "nearby_property_value": 70000000,  "tax_rate": 0.010 },
-    { "id": "p8", "name": "FAKE downtown road repave",  "type": "road",   "location": "Fayetteville, AR","cost": 900000, "daily_traffic": 12000, "minutes_saved_per_trip": 0.5, "nearby_property_value": 50000000,  "tax_rate": 0.011 }
+    { "id": "AR_FS_01",  "name": "Fort Smith - Riverfront Drive Corridor",        "type": "road", "location": "Sebastian County, AR",  "cost": 8500000,  "daily_traffic": 12400, "minutes_saved_per_trip": 1.5, "nearby_property_value": 74000000,  "tax_rate": 0.0097,  "_estimated": "cost, minutes_saved_per_trip, 400 parcels x $185,000 avg" },
+    { "id": "AR_FS_02",  "name": "Fort Smith - I-540 / Midland Blvd Interchange", "type": "road", "location": "Sebastian County, AR",  "cost": 24000000, "daily_traffic": 34200, "minutes_saved_per_trip": 2.5, "nearby_property_value": 40500000,  "tax_rate": 0.0097,  "_estimated": "cost, minutes_saved_per_trip, 250 parcels x $162,000 avg" },
+    { "id": "AR_412_01", "name": "Highway 412 - Springdale East Bypass",          "type": "road", "location": "Washington County, AR", "cost": 38000000, "daily_traffic": 22100, "minutes_saved_per_trip": 3.0, "nearby_property_value": 165000000, "tax_rate": 0.00784, "_estimated": "cost, minutes_saved_per_trip, 600 parcels x $275,000 avg" },
+    { "id": "AR_412_02", "name": "Highway 412 - Siloam Springs Commercial Corridor", "type": "road", "location": "Benton County, AR",  "cost": 12000000, "daily_traffic": 18900, "minutes_saved_per_trip": 1.0, "nearby_property_value": 84000000,  "tax_rate": 0.0083,  "_estimated": "cost, minutes_saved_per_trip, 350 parcels x $240,000 avg" }
   ]
 }
