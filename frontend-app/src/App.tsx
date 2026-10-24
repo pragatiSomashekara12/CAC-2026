@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 
 type Point = { total_cost: number; total_return: number; risk: number; project_ids: string[] };
-type Project = {
+type Candidate = {
   id: string; name: string; type: string; location: string; cost: number;
+  daily_traffic: number; minutes_saved_per_trip: number; nearby_property_value: number; tax_rate: number;
+};
+type Project = Candidate & {
   expected_return?: { time_savings: number; property_gain: number; tax_gain: number; total: number };
   risk?: { mean_overrun_pct: number; sd_overrun_pct: number; expected_cost: number; risk_dollars: number };
 };
 
 const API = 'http://127.0.0.1:8000';
-const BUDGET = 50000000;
+const DEFAULT_BUDGET = 50000000;
 
 // Completed ARDOT projects with verified final costs (InfraFrontier_verified_cost_cases_audit.csv)
 const VERIFIED_CASES = [
@@ -20,39 +23,96 @@ const VERIFIED_CASES = [
   { name: 'Baptist Hospital - University Ave. (Widening)', cost: 97400000, year: 2023, miles: 2.16 },
 ];
 
+const EMPTY_FORM = { name: '', type: 'bridge', location: '', costM: '', traffic: '', minutes: '', propertyM: '', taxPct: '0.97' };
+
 const money = (n: number) => '$' + Math.round(n).toLocaleString();
 const millions = (n: number) => '$' + (n / 1e6).toFixed(1) + 'M';
 const pct = (n: number) => (n * 100).toFixed(1) + '%';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [frontier, setFrontier] = useState<Point[]>([]);
   const [idx, setIdx] = useState(0);
+  const [budget, setBudget] = useState(DEFAULT_BUDGET);
+  const [budgetInput, setBudgetInput] = useState('50');
+  const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  async function analyze(cands: Candidate[], b: number) {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${API}/frontier`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projects: cands, budget: b }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Invalid input');
+      setProjects(data.projects || []);
+      setFrontier(data.frontier || []);
+      setIdx(Math.max(0, Math.floor(((data.frontier || []).length - 1) / 2)));
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error && e.message !== 'Failed to fetch'
+        ? e.message
+        : 'Could not reach the InfraFrontier backend. Is it running on port 8000?');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     (async () => {
       try {
         const demo = await (await fetch(`${API}/demo-projects`)).json();
-        const res = await fetch(`${API}/frontier`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ projects: demo, budget: BUDGET }),
-        });
-        const data = await res.json();
-        setProjects(data.projects || demo);
-        setFrontier(data.frontier || []);
-        setIdx(Math.floor(((data.frontier || []).length - 1) / 2));
+        setCandidates(demo);
+        await analyze(demo, DEFAULT_BUDGET);
       } catch (e) {
         console.error(e);
         setError('Could not reach the InfraFrontier backend. Is it running on port 8000?');
-      } finally {
         setLoading(false);
       }
     })();
   }, []);
+
+  function applyBudget() {
+    const b = parseFloat(budgetInput) * 1e6;
+    if (!b || b <= 0) { setError('Enter a budget greater than 0.'); return; }
+    setBudget(b);
+    analyze(candidates, b);
+  }
+
+  function addProject() {
+    const cost = parseFloat(form.costM) * 1e6;
+    if (!form.name.trim() || !cost || cost <= 0) { setError('A new project needs a name and a cost greater than 0.'); return; }
+    if (candidates.length >= 20) { setError('The optimizer supports up to 20 projects.'); return; }
+    const p: Candidate = {
+      id: 'USER_' + Date.now(),
+      name: form.name.trim(),
+      type: form.type,
+      location: form.location.trim() || 'Arkansas',
+      cost,
+      daily_traffic: parseFloat(form.traffic) || 0,
+      minutes_saved_per_trip: parseFloat(form.minutes) || 0,
+      nearby_property_value: (parseFloat(form.propertyM) || 0) * 1e6,
+      tax_rate: (parseFloat(form.taxPct) || 0) / 100,
+    };
+    const next = [...candidates, p];
+    setCandidates(next);
+    setForm(EMPTY_FORM);
+    analyze(next, budget);
+  }
+
+  function removeProject(id: string) {
+    const next = candidates.filter(c => c.id !== id);
+    if (!next.length) { setError('Keep at least one project.'); return; }
+    setCandidates(next);
+    analyze(next, budget);
+  }
 
   const nameOf = useMemo(() => {
     const m: Record<string, string> = {};
@@ -86,11 +146,33 @@ export default function App() {
   const statVal = { fontSize: 26, fontWeight: 700, marginTop: 6 } as const;
   const th = { textAlign: 'left', padding: '8px 10px', fontSize: 12, color: '#64748b', borderBottom: '1px solid #e2e8f0' } as const;
   const td = { padding: '10px', fontSize: 14, borderBottom: '1px solid #f1f5f9' } as const;
+  const input = { padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 14, width: '100%', boxSizing: 'border-box' } as const;
+  const fieldLabel = { fontSize: 12, color: '#64748b', display: 'block', marginBottom: 4 } as const;
+  const primaryBtn = { background: '#0ea5e9', color: 'white', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 14, fontWeight: 600, cursor: 'pointer' } as const;
 
   // Chart geometry
   const X0 = 70, X1 = 480, Y0 = 250, Y1 = 30;
   const px = (risk: number) => bounds ? X0 + ((risk - bounds.minR) / (bounds.maxR - bounds.minR || 1)) * (X1 - X0) : X0;
   const py = (ret: number) => bounds ? Y0 - ((ret - bounds.minRet) / (bounds.maxRet - bounds.minRet || 1)) * (Y0 - Y1) : Y0;
+
+  const field = (key: keyof typeof EMPTY_FORM, label: string, placeholder = '') => (
+    <div>
+      <label style={fieldLabel}>{label}</label>
+      <input style={input} value={form[key]} placeholder={placeholder}
+        onChange={e => setForm({ ...form, [key]: e.target.value })} />
+    </div>
+  );
+
+  const budgetControl = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <label style={{ fontSize: 14 }}><b>Budget ($M):</b></label>
+      <input style={{ ...input, width: 110 }} type="number" min="1" value={budgetInput}
+        onChange={e => setBudgetInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') applyBudget(); }} />
+      <button style={primaryBtn} onClick={applyBudget}>Update</button>
+    </div>
+  );
+
+  const noFit = !loading && !error && candidates.length > 0 && frontier.length === 0;
 
   return (
     <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', background: '#f5f7fb', minHeight: '100vh', color: '#0f172a' }}>
@@ -105,15 +187,21 @@ export default function App() {
       <main style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
         {loading && <p>Loading portfolio analysis...</p>}
         {error && <p style={{ color: '#dc2626' }}>{error}</p>}
+        {noFit && (activeTab === 'dashboard' || activeTab === 'optimization') && (
+          <div style={{ ...card, marginBottom: 16 }}>
+            <p style={{ marginTop: 0 }}>No project fits within a {millions(budget)} budget. Try a larger budget.</p>
+            {budgetControl}
+          </div>
+        )}
 
         {activeTab === 'dashboard' && sel && (
           <>
             <h1 style={{ textAlign: 'center', marginBottom: 4 }}>Dashboard</h1>
             <p style={{ textAlign: 'center', color: '#64748b', marginTop: 0 }}>
-              Recommended portfolio for a {millions(BUDGET)} budget at {riskLabel().toLowerCase()} risk tolerance
+              Recommended portfolio for a {millions(budget)} budget at {riskLabel().toLowerCase()} risk tolerance
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-              <div style={statCard}><div style={statLabel}>PORTFOLIO COST</div><div style={statVal}>{millions(sel.total_cost)}</div><small style={{ color: '#64748b' }}>of {millions(BUDGET)} budget</small></div>
+              <div style={statCard}><div style={statLabel}>PORTFOLIO COST</div><div style={statVal}>{millions(sel.total_cost)}</div><small style={{ color: '#64748b' }}>of {millions(budget)} budget</small></div>
               <div style={statCard}><div style={statLabel}>PROJECTS FUNDED</div><div style={statVal}>{sel.project_ids.length} of {projects.length}</div></div>
               <div style={statCard}><div style={statLabel}>EXPECTED BENEFIT</div><div style={statVal}>{millions(sel.total_return)}</div><small style={{ color: '#64748b' }}>20-yr present value</small></div>
               <div style={statCard}><div style={statLabel}>COST OVERRUN RISK</div><div style={statVal}>{riskLabel()}</div><small style={{ color: '#64748b' }}>± {millions(sel.risk)} (1 std. dev.)</small></div>
@@ -121,30 +209,34 @@ export default function App() {
             <div style={{ ...card, marginTop: 16 }}>
               <b>Funded projects</b>
               <ul style={{ margin: '8px 0 0 0' }}>{sel.project_ids.map(id => <li key={id}>{nameOf(id)}</li>)}</ul>
-              <p style={{ color: '#64748b', fontSize: 13, marginBottom: 0 }}>Change risk tolerance on the Portfolio Optimization tab.</p>
+              <p style={{ color: '#64748b', fontSize: 13, marginBottom: 0 }}>Change the budget and risk tolerance on the Portfolio Optimization tab.</p>
             </div>
           </>
         )}
 
-        {activeTab === 'projects' && projects.length > 0 && (
+        {activeTab === 'projects' && (
           <>
             <h1 style={{ marginBottom: 4 }}>Candidate Projects</h1>
             <p style={{ color: '#64748b', marginTop: 0 }}>Northwest Arkansas and Fort Smith infrastructure candidates</p>
             <div style={{ ...card, overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead><tr>
-                  <th style={th}>Project</th><th style={th}>Location</th><th style={th}>Cost</th>
-                  <th style={th}>Expected Benefit</th><th style={th}>Benefit / Cost</th><th style={th}>Expected Overrun</th>
+                  <th style={th}>Project</th><th style={th}>Type</th><th style={th}>Location</th><th style={th}>Cost</th>
+                  <th style={th}>Expected Benefit</th><th style={th}>Benefit / Cost</th><th style={th}>Expected Overrun</th><th style={th}></th>
                 </tr></thead>
                 <tbody>
                   {projects.map(p => (
                     <tr key={p.id}>
                       <td style={td}><b>{p.name}</b></td>
+                      <td style={td}>{p.type.charAt(0).toUpperCase() + p.type.slice(1)}</td>
                       <td style={td}>{p.location}</td>
                       <td style={td}>{millions(p.cost)}</td>
                       <td style={td}>{p.expected_return ? millions(p.expected_return.total) : '-'}</td>
                       <td style={td}>{p.expected_return ? (p.expected_return.total / p.cost).toFixed(1) + 'x' : '-'}</td>
                       <td style={td}>{p.risk ? pct(p.risk.mean_overrun_pct) : '-'}</td>
+                      <td style={td}>
+                        <button onClick={() => removeProject(p.id)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>Remove</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -153,13 +245,40 @@ export default function App() {
             <p style={{ color: '#64748b', fontSize: 13 }}>
               Traffic, property values and millage rates from county assessors and ARDOT. Project costs and travel-time savings are illustrative estimates.
             </p>
+
+            <div style={{ ...card, marginTop: 16 }}>
+              <b>Add a project</b>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginTop: 12 }}>
+                {field('name', 'Project name', 'e.g. Lake Fayetteville Bridge')}
+                <div>
+                  <label style={fieldLabel}>Type</label>
+                  <select style={input} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                    <option value="road">Road</option>
+                    <option value="bridge">Bridge</option>
+                    <option value="water">Water</option>
+                  </select>
+                </div>
+                {field('location', 'Location', 'e.g. Washington County, AR')}
+                {field('costM', 'Cost ($M)', 'e.g. 15')}
+                {field('traffic', 'Daily traffic (vehicles)', 'e.g. 10000')}
+                {field('minutes', 'Minutes saved per trip', 'e.g. 2')}
+                {field('propertyM', 'Nearby property value ($M)', 'e.g. 60')}
+                {field('taxPct', 'Effective property tax rate (%)', 'e.g. 0.97')}
+              </div>
+              <button style={{ ...primaryBtn, marginTop: 14 }} onClick={addProject}>Add project and re-optimize</button>
+            </div>
           </>
         )}
 
         {activeTab === 'optimization' && bounds && sel && (
           <>
-            <h1 style={{ marginBottom: 4 }}>Portfolio Optimization</h1>
-            <p style={{ color: '#64748b', marginTop: 0 }}>Efficient frontier: the highest benefit for each level of risk, within a {millions(BUDGET)} budget</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h1 style={{ marginBottom: 4 }}>Portfolio Optimization</h1>
+                <p style={{ color: '#64748b', marginTop: 0 }}>Efficient frontier: the highest benefit for each level of risk, within a {millions(budget)} budget</p>
+              </div>
+              <div style={{ marginBottom: 16 }}>{budgetControl}</div>
+            </div>
             <div style={card}>
               <svg viewBox="0 0 500 300" width="100%" height={340}>
                 <line x1={X0} y1={Y0} x2={X1} y2={Y0} stroke="#94a3b8" />
